@@ -44,6 +44,35 @@ abstract class AbstractCppIntegrationTest extends AbstractCppComponentIntegratio
         failure.assertThatCause(Matchers.containsText("C++ compiler failed while compiling broken.cpp"))
     }
 
+
+    def "can override"() {
+        given:
+        makeSingleProject()
+
+        componentUnderTest.writeToProject(testDirectory)
+
+        buildFile << """
+            model {
+                toolChains {
+                    clang(Clang) {
+                        eachPlatform {
+                            cppCompiler.optimizedTransformer { isOptimized ->
+                                return ['-O3']
+                            }
+                        }
+                    }
+                }
+            }
+        """
+
+        when:
+        succeeds "assembleRelease", "-i"
+
+        then:
+        file("build/tmp/compileReleaseCpp/options.txt").text.contains("-O3")
+        !file("build/tmp/compileReleaseCpp/options.txt").text.contains("-O2")
+    }
+
     protected abstract String getDevelopmentBinaryCompileTask()
 
     @Override
