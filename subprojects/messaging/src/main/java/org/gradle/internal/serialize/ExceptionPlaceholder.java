@@ -195,7 +195,7 @@ class ExceptionPlaceholder implements Serializable {
                 //                LOGGER.debug("Ignoring failure to extract throwable cause.", ignored);
                 causeTmp = null;
             }
-            return causeTmp == null ? Collections.emptyList() : Collections.singletonList(causeTmp);
+            return causeTmp == null ? Collections.<Throwable>emptyList() : Collections.singletonList(causeTmp);
         }
     }
 
