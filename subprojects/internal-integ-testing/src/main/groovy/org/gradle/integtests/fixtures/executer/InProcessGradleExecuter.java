@@ -72,7 +72,6 @@ import org.gradle.util.GUtil;
 import org.gradle.util.GradleVersion;
 import org.gradle.util.SetSystemProperties;
 import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -323,22 +322,7 @@ public class InProcessGradleExecuter extends DaemonGradleExecuter {
                 try {
                     BuildActionResult result = (BuildActionResult) actionExecuter.execute(action, buildRequestContext, buildActionParameters, GLOBAL_SERVICES);
                     if (result.failure != null) {
-                        PayloadSerializer payloadSerializer = new PayloadSerializer(new PayloadClassLoaderRegistry() {
-                            @Override
-                            public SerializeMap newSerializeSession() {
-                                throw new UnsupportedOperationException();
-                            }
-
-                            @Override
-                            public DeserializeMap newDeserializeSession() {
-                                return new DeserializeMap() {
-                                    @Override
-                                    public Class<?> resolveClass(ClassLoaderDetails classLoaderDetails, String className) throws ClassNotFoundException {
-                                        return Class.forName(className);
-                                    }
-                                };
-                            }
-                        });
+                        PayloadSerializer payloadSerializer = new PayloadSerializer(new TestClassLoaderRegistry());
                         return new BuildResult(null, (RuntimeException) payloadSerializer.deserialize(result.failure));
                     }
                     return new BuildResult(null, null);
@@ -753,6 +737,24 @@ public class InProcessGradleExecuter extends DaemonGradleExecuter {
 
         public DependencyResolutionFailure assertResolutionFailure(String configurationPath) {
             return new DependencyResolutionFailure(this, configurationPath);
+        }
+    }
+
+    private static class TestClassLoaderRegistry implements PayloadClassLoaderRegistry {
+        @Override
+        public SerializeMap newSerializeSession() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DeserializeMap newDeserializeSession() {
+            return new DeserializeMap() {
+                @Override
+                public Class<?> resolveClass(ClassLoaderDetails classLoaderDetails, String className) throws ClassNotFoundException {
+                    // Assume everything is loaded into the current classloader
+                    return Class.forName(className);
+                }
+            };
         }
     }
 }

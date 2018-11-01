@@ -293,6 +293,23 @@ class MessageTest extends Specification {
         transported == ReadReplaceException.singleton
     }
 
+    def "can transport broken multicause exception"() {
+        def ok = new RuntimeException("broken 1")
+        def notOk = new ExceptionWithNonSerializableField("broken 2", new RuntimeException("broken 3"))
+        def original = new MultiCauseExceptionWithExceptionField("original", notOk, [ok, notOk])
+
+        when:
+        def transported = transport(original)
+
+        then:
+        transported instanceof DefaultMultiCauseException
+        transported.message == "original"
+        transported.causes.size() == 2
+        transported.causes[0].message == "broken 1"
+        transported.causes[1].message == "broken 2"
+        transported.causes[1].cause.message == "broken 3"
+    }
+
     void looksLike(Throwable original, Throwable transported) {
         assert transported instanceof PlaceholderException
         assert transported.exceptionClassName == original.class.name
@@ -328,6 +345,15 @@ class MessageTest extends Specification {
         ExceptionWithExceptionField(String message, Throwable cause) {
             super(message, cause)
             throwable = cause
+        }
+    }
+
+    static class MultiCauseExceptionWithExceptionField extends DefaultMultiCauseException {
+        Throwable throwable
+
+        MultiCauseExceptionWithExceptionField(String message, Throwable field, List<Throwable> causes) {
+            super(message, causes)
+            throwable = field
         }
     }
 
