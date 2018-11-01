@@ -110,6 +110,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class InProcessGradleExecuter extends DaemonGradleExecuter {
     private final ProcessEnvironment processEnvironment = GLOBAL_SERVICES.get(ProcessEnvironment.class);
@@ -686,7 +687,13 @@ public class InProcessGradleExecuter extends DaemonGradleExecuter {
             outputFailure.assertThatCause(matcher);
             List<Throwable> causes = new ArrayList<Throwable>();
             extractCauses(failure, causes);
-            assertThat(causes, Matchers.hasItem(hasMessage(normalizedLineSeparators(matcher))));
+            Matcher<Throwable> messageMatcher = hasMessage(normalizedLineSeparators(matcher));
+            for (Throwable cause : causes) {
+                if (messageMatcher.matches(cause)) {
+                    return this;
+                }
+            }
+            fail(String.format("Could not find matching cause in: %s%nFailure is: %s", causes, failure));
             return this;
         }
 
