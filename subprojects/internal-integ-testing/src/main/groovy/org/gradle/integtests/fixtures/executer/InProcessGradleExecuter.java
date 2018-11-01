@@ -37,7 +37,6 @@ import org.gradle.initialization.DefaultBuildCancellationToken;
 import org.gradle.initialization.DefaultBuildRequestContext;
 import org.gradle.initialization.DefaultBuildRequestMetaData;
 import org.gradle.initialization.NoOpBuildEventConsumer;
-import org.gradle.initialization.ReportedException;
 import org.gradle.initialization.layout.BuildLayoutFactory;
 import org.gradle.integtests.fixtures.logging.GroupedOutputFixture;
 import org.gradle.internal.Factory;
@@ -62,6 +61,12 @@ import org.gradle.process.internal.JavaExecHandleBuilder;
 import org.gradle.test.fixtures.file.TestDirectoryProvider;
 import org.gradle.test.fixtures.file.TestFile;
 import org.gradle.testfixtures.internal.NativeServicesTestFixture;
+import org.gradle.tooling.internal.provider.BuildActionResult;
+import org.gradle.tooling.internal.provider.serialization.ClassLoaderDetails;
+import org.gradle.tooling.internal.provider.serialization.DeserializeMap;
+import org.gradle.tooling.internal.provider.serialization.PayloadClassLoaderRegistry;
+import org.gradle.tooling.internal.provider.serialization.PayloadSerializer;
+import org.gradle.tooling.internal.provider.serialization.SerializeMap;
 import org.gradle.util.DeprecationLogger;
 import org.gradle.util.GUtil;
 import org.gradle.util.GradleVersion;
@@ -315,16 +320,33 @@ public class InProcessGradleExecuter extends DaemonGradleExecuter {
             try {
                 startMeasurement();
                 try {
-                    actionExecuter.execute(action, buildRequestContext, buildActionParameters, GLOBAL_SERVICES);
+                    BuildActionResult result = (BuildActionResult) actionExecuter.execute(action, buildRequestContext, buildActionParameters, GLOBAL_SERVICES);
+                    if (result.failure != null) {
+                        PayloadSerializer payloadSerializer = new PayloadSerializer(new PayloadClassLoaderRegistry() {
+                            @Override
+                            public SerializeMap newSerializeSession() {
+                                throw new UnsupportedOperationException();
+                            }
+
+                            @Override
+                            public DeserializeMap newDeserializeSession() {
+                                return new DeserializeMap() {
+                                    @Override
+                                    public Class<?> resolveClass(ClassLoaderDetails classLoaderDetails, String className) throws ClassNotFoundException {
+                                        return Class.forName(className);
+                                    }
+                                };
+                            }
+                        });
+                        return new BuildResult(null, (RuntimeException) payloadSerializer.deserialize(result.failure));
+                    }
+                    return new BuildResult(null, null);
                 } finally {
                     stopMeasurement();
                 }
             } finally {
                 loggingManager.stop();
             }
-            return new BuildResult(null, null);
-        } catch (ReportedException e) {
-            return new BuildResult(null, e.getCause());
         } finally {
             listenerManager.removeListener(listener);
         }

@@ -56,7 +56,7 @@ public class ClientProvidedPhasedActionRunner implements BuildActionRunner {
         ActionRunningListener listener = new ActionRunningListener(phasedAction, gradle);
 
         Throwable buildFailure = null;
-        Throwable clientFailure = null;
+        RuntimeException clientFailure = null;
         try {
             gradle.addBuildListener(listener);
             if (clientProvidedPhasedAction.isRunTasks()) {
@@ -76,9 +76,9 @@ public class ClientProvidedPhasedActionRunner implements BuildActionRunner {
         }
 
         if (buildFailure != null) {
-            return Result.of(new BuildActionResult(null, payloadSerializer.serialize(clientFailure)), buildFailure);
+            return Result.failed(buildFailure, clientFailure);
         }
-        return Result.of(new BuildActionResult(payloadSerializer.serialize(null), null));
+        return Result.of(null);
     }
 
     private PayloadSerializer getPayloadSerializer(GradleInternal gradle) {
