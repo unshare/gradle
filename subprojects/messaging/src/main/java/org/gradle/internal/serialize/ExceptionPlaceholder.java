@@ -18,6 +18,7 @@ package org.gradle.internal.serialize;
 
 import org.gradle.api.Transformer;
 import org.gradle.internal.UncheckedException;
+import org.gradle.internal.exceptions.Contextual;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.internal.exceptions.MultiCauseException;
 import org.gradle.internal.io.StreamByteBuffer;
@@ -41,13 +42,15 @@ class ExceptionPlaceholder implements Serializable {
     private byte[] serializedException;
     private String message;
     private String toString;
-    private List<ExceptionPlaceholder> causes;
+    private final boolean contextual;
+    private final List<ExceptionPlaceholder> causes;
     private StackTraceElement[] stackTrace;
     private Throwable toStringRuntimeExec;
     private Throwable getMessageExec;
 
     public ExceptionPlaceholder(final Throwable throwable, Transformer<ExceptionReplacingObjectOutputStream, OutputStream> objectOutputStreamCreator) {
         type = throwable.getClass().getName();
+        contextual = throwable.getClass().getAnnotation(Contextual.class) != null;
 
         try {
             stackTrace = throwable.getStackTrace() == null ? new StackTraceElement[0] : throwable.getStackTrace();
@@ -161,7 +164,11 @@ class ExceptionPlaceholder implements Serializable {
 
         Throwable placeholder;
         if (causes.size() <= 1) {
-            placeholder = new PlaceholderException(type, message, getMessageExec, toString, toStringRuntimeExec, causes.isEmpty() ? null : causes.get(0));
+            if (contextual) {
+                placeholder = new ContextualPlaceholderException(type, message, getMessageExec, toString, toStringRuntimeExec, causes.isEmpty() ? null : causes.get(0));
+            } else {
+                placeholder = new PlaceholderException(type, message, getMessageExec, toString, toStringRuntimeExec, causes.isEmpty() ? null : causes.get(0));
+            }
         } else {
             placeholder = new DefaultMultiCauseException(message, causes);
         }
