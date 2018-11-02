@@ -18,10 +18,10 @@ package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
 
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.result.ComponentSelectionReason;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyResult;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.ResolvedGraphDependency;
 import org.gradle.internal.resolve.ModuleVersionResolveException;
 
-public class DefaultDependencyResult implements DependencyResult {
+public class DefaultDependencyResult implements ResolvedGraphDependency {
 
     private final ComponentSelector requested;
     private final Long selected;
