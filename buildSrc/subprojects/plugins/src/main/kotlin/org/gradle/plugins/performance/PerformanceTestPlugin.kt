@@ -26,9 +26,9 @@ import org.gradle.testing.performance.generator.tasks.AbstractProjectGeneratorTa
 import org.gradle.testing.performance.generator.tasks.JavaExecProjectGeneratorTask
 import org.gradle.testing.performance.generator.tasks.JvmProjectGeneratorTask
 import org.gradle.testing.performance.generator.tasks.ProjectGeneratorTask
-import org.gradle.testing.performance.generator.tasks.RemoteProject
 import org.gradle.testing.performance.generator.tasks.TemplateProjectGeneratorTask
 import org.gradle.kotlin.dsl.*
+import org.gradle.testing.performance.generator.tasks.RemoteProject
 
 import org.w3c.dom.Document
 import java.io.File
@@ -36,7 +36,6 @@ import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.reflect.KClass
 
 
-private
 object PropertyNames {
     const val dbUrl = "org.gradle.performance.db.url"
     const val dbUsername = "org.gradle.performance.db.username"
@@ -108,29 +107,10 @@ class PerformanceTestPlugin : Plugin<Project> {
     private
     fun Project.registerForkPointDistributionTask() {
         val determineForkPoint = tasks.register("determineForkPoint", DetermineForkPoint::class)
-        val buildForkPointDistribution = tasks.register("buildForkPointDistribution", BuildForkPointDistribution::class) {
-            forkPointDistributionVersion.set(determineForkPoint.flatMap { it.forkPointDistributionVersion })
+        tasks.register("buildForkPointDistribution", BuildCommitDistribution::class) {
+            forkPointDistributionVersion.set(determineForkPoint.flatMap { it.forkPointCommitVersion })
             dependsOn(determineForkPoint)
         }
-
-        tasks.register("configurePerformanceTestBaseline") {
-            dependsOn(buildForkPointDistribution)
-            doLast {
-                val commitBaseline = determineForkPoint.get().forkPointDistributionVersion.get()
-                project.tasks.withType(DistributedPerformanceTest::class) {
-                    if (baselines.isNullOrEmpty() || baselines == "defaults") {
-                        baselines = commitBaseline
-                    }
-                }
-            }
-        }
-    }
-
-    private
-    fun Project.whenNotOnMasterOrReleaseBranch(action: (branchName: String) -> Unit) {
-        stringPropertyOrNull(PropertyNames.branchName)
-            ?.takeIf { it.isNotEmpty() && it != "master" && it != "release" }
-            ?.let(action)
     }
 
     private
@@ -453,10 +433,6 @@ class PerformanceTestPlugin : Plugin<Project> {
 
             configureSampleGenerators {
                 this@apply.mustRunAfter(this)
-            }
-
-            whenNotOnMasterOrReleaseBranch {
-                this@apply.dependsOn("configurePerformanceTestBaseline")
             }
         }
 

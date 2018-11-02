@@ -16,22 +16,23 @@
 
 package org.gradle.plugins.performance
 
-import org.gradle.api.DefaultTask
+import org.gradle.api.Action
 import org.gradle.api.internal.GradleInternal
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.caching.http.HttpBuildCache
-import org.gradle.kotlin.dsl.execAndGetStdout
-import java.io.File
 import org.gradle.kotlin.dsl.*
-import org.gradle.util.GFileUtils
+import org.gradle.testing.performance.generator.tasks.CheckoutRemoteProjectTaskWorkaround
+import java.io.File
 
 
-open class BuildForkPointDistribution : DefaultTask() {
+open class BuildCommitDistribution : CheckoutRemoteProjectTaskWorkaround() {
     // 5.1-commit-1a2b3c4d5e
     @Input
+    @Optional
     val forkPointDistributionVersion = project.objects.property<String>()
 
     @OutputDirectory
@@ -46,41 +47,27 @@ open class BuildForkPointDistribution : DefaultTask() {
     }
 
     @TaskAction
-    fun buildDistribution() {
-        prepareGradleRepository()
-        tryBuildDistribution()
+    fun buildCommitDistribution() {
+        val checkoutDir = checkout()
+        tryBuildDistribution(checkoutDir)
         println("Building fork point succeeded, now the baseline is ${forkPointDistributionVersion.get()}")
     }
 
     private
-    fun prepareGradleRepository() {
-        val cloneDir = getGradleCloneTmpDir()
-        if (!File(cloneDir, ".git").isDirectory) {
-            GFileUtils.mkdirs(cloneDir)
-            project.execAndGetStdout(cloneDir.parentFile, "git", "clone", project.rootDir.absolutePath, getGradleCloneTmpDir().absolutePath, "--no-checkout")
-        }
-        project.execAndGetStdout(cloneDir, "git", "reset", "--hard")
-        project.execAndGetStdout(cloneDir, "git", "fetch")
+    fun tryBuildDistribution(checkoutDir: File) {
+        project.exec(Action {
+            commandLine(*getBuildCommands(checkoutDir))
+            workingDir = checkoutDir
+        })
     }
 
     private
-    fun getGradleCloneTmpDir() = File(project.rootProject.buildDir, "tmp/gradle-find-forkpoint")
-
-    private
-    fun tryBuildDistribution() {
-        val version = forkPointDistributionVersion.get()
-        val commit = version.substring(version.lastIndexOf('-') + 1)
-        project.execAndGetStdout(getGradleCloneTmpDir(), "git", "checkout", commit, "--force")
-        project.execAndGetStdout(getGradleCloneTmpDir(), *getBuildCommands())
-    }
-
-    private
-    fun getBuildCommands(): Array<String> {
+    fun getBuildCommands(checkoutDir: File): Array<String> {
         project.delete(forkPointDistributionHome.get().asFile)
         val buildCommands = mutableListOf(
             "./gradlew",
             "--init-script",
-            File(getGradleCloneTmpDir(), "gradle/init-scripts/build-scan.init.gradle.kts").absolutePath,
+            File(checkoutDir, "gradle/init-scripts/build-scan.init.gradle.kts").absolutePath,
             "clean",
             ":install",
             "-Pgradle_installPath=" + forkPointDistributionHome.get().asFile.absolutePath,
