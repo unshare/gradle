@@ -71,10 +71,10 @@ public class DefaultResolutionResultBuilder {
         for (ResolvedGraphDependency d : dependencies) {
             DependencyResult dependencyResult;
             if (d.getFailure() != null) {
-                dependencyResult = dependencyResultFactory.createUnresolvedDependency(d.getRequested(), from, d.getReason(), d.getFailure());
+                dependencyResult = dependencyResultFactory.createUnresolvedDependency(d.getRequested(), d.isConstraint(), from, d.getReason(), d.getFailure());
             } else {
                 DefaultResolvedComponentResult selected = modules.get(d.getSelected());
-                dependencyResult = dependencyResultFactory.createResolvedDependency(d.getRequested(), from, selected);
+                dependencyResult = dependencyResultFactory.createResolvedDependency(d.getRequested(), d.isConstraint(), from, selected);
                 selected.addDependent((ResolvedDependencyResult) dependencyResult);
             }
             from.addDependency(dependencyResult);
@@ -92,7 +92,7 @@ public class DefaultResolutionResultBuilder {
         for (UnresolvedDependency failure : extraFailures) {
             ModuleVersionSelector failureSelector = failure.getSelector();
             ModuleComponentSelector failureComponentSelector = DefaultModuleComponentSelector.newSelector(failureSelector.getModule(), failureSelector.getVersion());
-            root.addDependency(dependencyResultFactory.createUnresolvedDependency(failureComponentSelector,
+            root.addDependency(dependencyResultFactory.createUnresolvedDependency(failureComponentSelector, true,
                 root,
                 ComponentSelectionReasons.of(new DefaultComponentSelectionDescriptor(ComponentSelectionCause.CONSTRAINT, Describables.of("Dependency locking"))),
                 new ModuleVersionResolveException(failureComponentSelector, "Dependency lock state out of date", failure.getProblem())));

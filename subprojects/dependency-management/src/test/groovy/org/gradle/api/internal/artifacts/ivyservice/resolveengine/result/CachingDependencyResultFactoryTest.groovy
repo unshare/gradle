@@ -36,12 +36,12 @@ class CachingDependencyResultFactoryTest extends Specification {
         def selectedModule = newModule('selected')
 
         when:
-        def dep = factory.createResolvedDependency(selector('requested'), fromModule, selectedModule)
-        def same = factory.createResolvedDependency(selector('requested'), fromModule, selectedModule)
+        def dep = factory.createResolvedDependency(selector('requested'), false, fromModule, selectedModule)
+        def same = factory.createResolvedDependency(selector('requested'), false, fromModule, selectedModule)
 
-        def differentRequested = factory.createResolvedDependency(selector('xxx'), fromModule, selectedModule)
-        def differentFrom = factory.createResolvedDependency(selector('requested'), newModule('xxx'), selectedModule)
-        def differentSelected = factory.createResolvedDependency(selector('requested'), fromModule, newModule('xxx'))
+        def differentRequested = factory.createResolvedDependency(selector('xxx'), false, fromModule, selectedModule)
+        def differentFrom = factory.createResolvedDependency(selector('requested'), false, newModule('xxx'), selectedModule)
+        def differentSelected = factory.createResolvedDependency(selector('requested'), false, fromModule, newModule('xxx'))
 
         then:
         dep.is(same)
@@ -55,12 +55,12 @@ class CachingDependencyResultFactoryTest extends Specification {
         def selectedModule = newModule('selected', 'a', '1', selectedByRule(), newVariant('custom', [attr1: 'foo', attr2: 'bar']))
 
         when:
-        def dep = factory.createResolvedDependency(selector('requested'), fromModule, selectedModule)
-        def same = factory.createResolvedDependency(selector('requested'), fromModule, selectedModule)
+        def dep = factory.createResolvedDependency(selector('requested'), false, fromModule, selectedModule)
+        def same = factory.createResolvedDependency(selector('requested'), false, fromModule, selectedModule)
 
-        def differentRequested = factory.createResolvedDependency(selector('xxx'), fromModule, selectedModule)
-        def differentFrom = factory.createResolvedDependency(selector('requested'), newModule('xxx'), selectedModule)
-        def differentSelected = factory.createResolvedDependency(selector('requested'), fromModule, newModule('xxx'))
+        def differentRequested = factory.createResolvedDependency(selector('xxx'), false, fromModule, selectedModule)
+        def differentFrom = factory.createResolvedDependency(selector('requested'), false, newModule('xxx'), selectedModule)
+        def differentSelected = factory.createResolvedDependency(selector('requested'), false, fromModule, newModule('xxx'))
 
         then:
         dep.is(same)
@@ -74,12 +74,12 @@ class CachingDependencyResultFactoryTest extends Specification {
         def selectedModule = Mock(ComponentSelectionReason)
 
         when:
-        def dep = factory.createUnresolvedDependency(selector('requested'), fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
-        def same = factory.createUnresolvedDependency(selector('requested'), fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
+        def dep = factory.createUnresolvedDependency(selector('requested'), false, fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
+        def same = factory.createUnresolvedDependency(selector('requested'), false, fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
 
-        def differentRequested = factory.createUnresolvedDependency(selector('xxx'), fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('xxx'), "foo"))
-        def differentFrom = factory.createUnresolvedDependency(selector('requested'), newModule('xxx'), selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
-        def differentFailure = factory.createUnresolvedDependency(selector('requested'), fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
+        def differentRequested = factory.createUnresolvedDependency(selector('xxx'), false, fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('xxx'), "foo"))
+        def differentFrom = factory.createUnresolvedDependency(selector('requested'), false, newModule('xxx'), selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
+        def differentFailure = factory.createUnresolvedDependency(selector('requested'), false, fromModule, selectedModule, new ModuleVersionResolveException(moduleVersionSelector('requested'), "foo"))
 
         then:
         dep.is(same)
